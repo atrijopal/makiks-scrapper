@@ -1,0 +1,28 @@
+# ── Matiks Social Monitor — Custom n8n + Python Image ───────────────────────
+# Stage 1: pull Python and build packages
+FROM python:3.11-alpine AS pybase
+
+RUN pip install --no-cache-dir --prefix=/install \
+    google-play-scraper \
+    app-store-scraper \
+    vaderSentiment \
+    requests \
+    rank_bm25 \
+    python-Levenshtein \
+    fuzzywuzzy \
+    twscrape
+
+# ── Stage 2: n8n image with Python ───────────────────────────────────────────
+FROM n8nio/n8n:latest
+
+# Bring in Python interpreter + stdlib from the builder stage
+COPY --from=pybase /usr/local/bin/python3.11 /usr/local/bin/python3
+COPY --from=pybase /usr/local/lib/python3.11 /usr/local/lib/python3.11
+
+# Bring in installed site-packages
+COPY --from=pybase /install /usr/local
+
+# Create data output directory (n8n image uses node user)
+USER root
+RUN mkdir -p /data/data && chown -R node:node /data
+USER node

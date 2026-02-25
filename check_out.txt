@@ -1,0 +1,15 @@
+Reddit in enriched: 11
+  relevance=7 topic=general | Loving using "Matiks" for quick math calculations.
+  relevance=10 topic=feature_request | Calling College Students – Organize a Matiks League at 
+  relevance=10 topic=feature_request | If you don’t know about Matiks
+  relevance=10 topic=feature_request | what are some apps that you use to keep yourselves busy
+  relevance=10 topic=feature_request | never thought i'd get addicted to doing maths in my fre
+  relevance=10 topic=feature_request | How I landed an internship at Matiks through Reddit (an
+  relevance=10 topic=feature_request | The Role of Math in Shopping (and how I stopped using m
+  relevance=10 topic=feature_request | Mental math isn't just for nerds...it's actually pretty
+  relevance=7 topic=general | Mental math isn't just for nerds...it's actually pretty
+  relevance=10 topic=feature_request | Mental math isn't just for nerds...it's actually pretty
+  relevance=7 topic=general | Mental math isn't just for nerds...it's actually pretty
+
+meta llm_backend: None
+meta llm_enriched: True

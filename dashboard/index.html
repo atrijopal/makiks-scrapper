@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Matiks — Intelligence Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="../data/data.js" onerror="console.warn('data.js not found — will try fetch')"></script>
+
+  <style>
+    /* ── Tokens ─────────────────────────────────────────────────────────── */
+    :root {
+      --bg: #07080f;
+      --s1: #0d0f1c;
+      --s2: #131629;
+      --s3: #1a1e35;
+      --border: #1f2340;
+      --border2: #2a2f52;
+      --accent: #00e5c4;
+      --accent-d: rgba(0, 229, 196, .12);
+      --accent-g: rgba(0, 229, 196, .06);
+      --text: #e8eaf2;
+      --muted: #545878;
+      --muted2: #7b80a0;
+      --pos: #3ddc84;
+      --pos-d: rgba(61, 220, 132, .12);
+      --neg: #ff5c5c;
+      --neg-d: rgba(255, 92, 92, .12);
+      --neu: #f5b843;
+      --neu-d: rgba(245, 184, 67, .10);
+      --crit: #ff3535;
+      --reddit: #ff5722;
+      --play: #00c853;
+      --apple: #4da6ff;
+      --twitter: #1d9bf0;
+    }
+
+    /* ── Reset ──────────────────────────────────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 14px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 2px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent);
+    }
+
+    /* mono class */
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Critical Banner ────────────────────────────────────────────────── */
+    #alert-banner {
+      display: none;
+      background: linear-gradient(90deg, rgba(255, 53, 53, .15), transparent);
+      border-bottom: 1px solid rgba(255, 53, 53, .25);
+      padding: 10px 32px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+
+    #alert-banner:hover {
+      background: linear-gradient(90deg, rgba(255, 53, 53, .22), transparent);
+    }
+
+    .alert-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--crit);
+      flex-shrink: 0;
+      box-shadow: 0 0 0 0 rgba(255, 53, 53, .5);
+      animation: pulse 1.6s cubic-bezier(.66, 0, 0, 1) infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(255, 53, 53, .5);
+      }
+
+      70% {
+        box-shadow: 0 0 0 9px rgba(255, 53, 53, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 53, 53, 0);
+      }
+    }
+
+    #alert-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--crit);
+      letter-spacing: .04em;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 60px;
+      background: var(--s1);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+
+    .logo-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--accent);
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--bg);
+      flex-shrink: 0;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-text {
+      line-height: 1.15;
+    }
+
+    .brand-name {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -.01em;
+    }
+
+    .brand-name em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    #last-updated {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid var(--border2);
+      background: var(--s2);
+      color: var(--muted2);
+      border-radius: 7px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      letter-spacing: .02em;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: var(--s2);
+      border-color: var(--border2);
+    }
+
+    .dupe-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted2);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .dupe-toggle input {
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* ── Stat Ribbon ─────────────────────────────────────────────────────── */
+    .stats-ribbon {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-cell {
+      padding: 18px 20px;
+      border-right: 1px solid var(--border);
+      cursor: default;
+      transition: background .15s;
+    }
+
+    .stat-cell:last-child {
+      border-right: none;
+    }
+
+    .stat-cell:hover {
+      background: var(--s2);
+    }
+
+    .stat-cell.clickable {
+      cursor: pointer;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 26px;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .stat-num.c-accent {
+      color: var(--accent);
+    }
+
+    .stat-num.c-reddit {
+      color: var(--reddit);
+    }
+
+    .stat-num.c-play {
+      color: var(--play);
+    }
+
+    .stat-num.c-apple {
+      color: var(--apple);
+    }
+
+    .stat-num.c-twitter {
+      color: var(--twitter);
+    }
+
+    .stat-num.c-pos {
+      color: var(--pos);
+    }
+
+    .stat-num.c-neg {
+      color: var(--neg);
+    }
+
+    .stat-num.c-crit {
+      color: var(--crit);
+    }
+
+    /* ── Sentiment Pulse Bar ─────────────────────────────────────────────── */
+    .pulse-bar {
+      height: 4px;
+      display: flex;
+      background: var(--border);
+    }
+
+    .pb-pos {
+      background: var(--pos);
+      transition: width .6s ease;
+    }
+
+    .pb-neg {
+      background: var(--neg);
+      transition: width .6s ease;
+    }
+
+    .pb-neu {
+      background: var(--muted);
+      transition: width .6s ease;
+    }
+
+    /* ── Word Cloud ──────────────────────────────────────────────────────── */
+    #wc-section {
+      display: none;
+      padding: 14px 32px;
+      border-bottom: 1px solid var(--border);
+      background: var(--s1);
+    }
+
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .cloud-words {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .cloud-word {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 10px;
+      color: var(--muted2);
+      cursor: pointer;
+      transition: all .15s;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .cloud-word:hover {
+      background: var(--accent-d);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .cloud-word small {
+      opacity: .4;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      margin-left: 3px;
+    }
+
+    /* ── Charts ──────────────────────────────────────────────────────────── */
+    .charts-section {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .chart-card {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      transition: border-color .2s;
+    }
+
+    .chart-card:hover {
+      border-color: var(--border2);
+    }
+
+    .chart-card h3 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 190px;
+    }
+
+    /* ── Filter Bar ──────────────────────────────────────────────────────── */
+    .filters {
+      background: var(--s1);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-sep {
+      width: 1px;
+      height: 24px;
+      background: var(--border2);
+      flex-shrink: 0;
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 160px;
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 12px 6px 32px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: 'Syne', sans-serif;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .search-box input::placeholder {
+      color: var(--muted);
+    }
+
+    .search-box input:focus {
+      border-color: var(--accent);
+    }
+
+    .date-range {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .date-range label {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .date-range input[type="date"] {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 5px 9px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      outline: none;
+      transition: border-color .15s;
+      cursor: pointer;
+    }
+
+    .date-range input[type="date"]:focus {
+      border-color: var(--accent);
+    }
+
+    .sort-select select {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 9px;
+      color: var(--muted2);
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+
+    .sort-select select:focus {
+      border-color: var(--accent);
+    }
+
+    /* ── Main Content ─────────────────────────────────────────────────────── */
+    .main {
+      padding: 24px 32px;
+    }
+
+    .main-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .main-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .main-title .date-pill {
+      background: var(--accent-d);
+      border: 1px solid rgba(0, 229, 196, .2);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 2px 9px;
+      font-size: 10px;
+      letter-spacing: .05em;
+    }
+
+    #results-count {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    #results-count strong {
+      color: var(--text);
+    }
+
+    /* ── Cards ───────────────────────────────────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color .15s, transform .12s;
+      animation: fadeUp .22s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      left: 0;
+      top: 0;
+      width: 3px;
+      border-radius: 12px 0 0 12px;
+      background: transparent;
+      transition: background .15s;
+    }
+
+    .card:hover {
+      border-color: var(--border2);
+      transform: translateY(-1px);
+    }
+
+    .card:hover::before {
+      background: var(--accent);
+    }
+
+    .card.is-critical {
+      border-color: rgba(255, 53, 53, .3);
+    }
+
+    .card.is-critical::before {
+      background: var(--crit);
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .crit-ribbon {
+      position: absolute;
+      top: 0;
+      right: 14px;
+      background: var(--crit);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 8px 3px;
+      border-radius: 0 0 6px 6px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    /* card header */
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .card-badges {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      border: 1px solid transparent;
+    }
+
+    /* Platform badges */
+    .badge.reddit {
+      background: rgba(255, 87, 34, .12);
+      color: var(--reddit);
+      border-color: rgba(255, 87, 34, .2);
+    }
+
+    .badge.playstore {
+      background: rgba(0, 200, 83, .10);
+      color: var(--play);
+      border-color: rgba(0, 200, 83, .2);
+    }
+
+    .badge.appstore {
+      background: rgba(77, 166, 255, .10);
+      color: var(--apple);
+      border-color: rgba(77, 166, 255, .2);
+    }
+
+    .badge.twitter {
+      background: rgba(29, 155, 240, .10);
+      color: var(--twitter);
+      border-color: rgba(29, 155, 240, .2);
+    }
+
+    /* Sentiment badges */
+    .badge.very_positive,
+    .badge.positive {
+      background: var(--pos-d);
+      color: var(--pos);
+      border-color: rgba(61, 220, 132, .2);
+    }
+
+    .badge.very_negative,
+    .badge.negative {
+      background: var(--neg-d);
+      color: var(--neg);
+      border-color: rgba(255, 92, 92, .2);
+    }
+
+    .badge.neutral,
+    .badge.mixed {
+      background: var(--neu-d);
+      color: var(--neu);
+      border-color: rgba(245, 184, 67, .2);
+    }
+
+    /* Topic badges */
+    .badge.bug_report {
+      background: rgba(255, 92, 92, .1);
+      color: #ff8080;
+      border-color: rgba(255, 92, 92, .2);
+    }
+
+    .badge.feature_request {
+      background: rgba(77, 166, 255, .1);
+      color: #80b8ff;
+      border-color: rgba(77, 166, 255, .2);
+    }
+
+    .badge.praise {
+      background: rgba(61, 220, 132, .1);
+      color: var(--pos);
+      border-color: rgba(61, 220, 132, .2);
+    }
+
+    .badge.question {
+      background: rgba(245, 184, 67, .1);
+      color: var(--neu);
+      border-color: rgba(245, 184, 67, .2);
+    }
+
+    .badge.competitor_comparison {
+      background: rgba(167, 92, 255, .1);
+      color: #c490ff;
+      border-color: rgba(167, 92, 255, .2);
+    }
+
+    .badge.general {
+      background: var(--s3);
+      color: var(--muted2);
+      border-color: var(--border);
+    }
+
+    .card-date {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* card content */
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--text);
+    }
+
+    .card-text {
+      font-size: 12px;
+      color: var(--muted2);
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* key phrases */
+    .key-phrases {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .kp {
+      background: var(--accent-g);
+      border: 1px solid rgba(0, 229, 196, .15);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* stars */
+    .stars {
+      color: var(--neu);
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+
+    .stars .empty {
+      color: var(--border2);
+    }
+
+    /* relevance + sentiment row */
+    .metric-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rel-track {
+      flex: 1;
+      height: 3px;
+      background: var(--s3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .rel-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    .rel-label {
+      font-size: 9px;
+      color: var(--muted);
+      white-space: nowrap;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .rel-val {
+      font-size: 10px;
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .sent-bar {
+      display: flex;
+      height: 2px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .s-pos {
+      background: var(--pos);
+    }
+
+    .s-neg {
+      background: var(--neg);
+    }
+
+    .s-neu {
+      background: var(--s3);
+    }
+
+    /* card footer */
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    .card-meta {
+      display: flex;
+      gap: 10px;
+    }
+
+    .card-meta span {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .card-meta span .ico {
+      font-size: 10px;
+    }
+
+    .card-author {
+      font-size: 10px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .card-author strong {
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 10px;
+    }
+
+    .card-link {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted2);
+      text-decoration: none;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      transition: color .15s;
+    }
+
+    .card-link:hover {
+      color: var(--accent);
+    }
+
+    /* ── Empty / Loading ─────────────────────────────────────────────────── */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .empty-state p {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 320px;
+      margin: 0 auto;
+    }
+
+    .loading-state {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 60px;
+      color: var(--muted);
+    }
+
+    .spinner {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--border2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ── Responsive ──────────────────────────────────────────────────────── */
+    @media (max-width: 1200px) {
+      .charts-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .stats-ribbon {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+
+      .header,
+      .stats-ribbon,
+      .filters,
+      .charts-section,
+      .main,
+      #wc-section {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .stats-ribbon {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .charts-grid,
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .filters {
+        gap: 6px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Critical Alert Banner ───────────────────────────────────────────── -->
+  <div id="alert-banner" onclick="filterCritical()">
+    <div class="alert-inner">
+      <div class="pulse-dot"></div>
+      <span id="alert-text">⚠ Critical Issues Detected — Click to filter</span>
+    </div>
+  </div>
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="logo-mark">M</div>
+      <div class="brand-text">
+        <div class="brand-name"><em>Matiks</em> Monitor</div>
+        <div id="last-updated" class="mono">Loading…</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <label class="dupe-toggle">
+        <input type="checkbox" id="hide-dupes" onchange="applyFilters()">
+        <span>Hide dupes</span>
+      </label>
+      <button class="btn btn-ghost" onclick="loadData()">↻ Refresh</button>
+    </div>
+  </header>
+
+  <!-- ── Stat Ribbon ──────────────────────────────────────────────────────── -->
+  <div class="stats-ribbon">
+    <div class="stat-cell">
+      <div class="stat-label">Total</div>
+      <div class="stat-num c-accent mono" id="s-total">—</div>
+    </div>
+    <div class="stat-cell clickable" onclick="setFilter('platform','reddit',document.getElementById('pf-reddit'))">
+      <div class="stat-label">Reddit</div>
+      <div class="stat-num c-reddit mono" id="s-reddit">—</div>
+    </div>
+    <div class="stat-cell clickable" onclick="setFilter('platform','playstore',document.getElementById('pf-play'))">
+      <div class="stat-label">Play Store</div>
+      <div class="stat-num c-play mono" id="s-playstore">—</div>
+    </div>
+    <div class="stat-cell clickable" onclick="setFilter('platform','appstore',document.getElementById('pf-apple'))">
+      <div class="stat-label">App Store</div>
+      <div class="stat-num c-apple mono" id="s-appstore">—</div>
+    </div>
+    <div class="stat-cell clickable" onclick="setFilter('platform','twitter',document.getElementById('pf-twitter'))">
+      <div class="stat-label">Twitter / X</div>
+      <div class="stat-num c-twitter mono" id="s-twitter">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Positive</div>
+      <div class="stat-num c-pos mono" id="s-pos">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Negative</div>
+      <div class="stat-num c-neg mono" id="s-neg">—</div>
+    </div>
+    <div class="stat-cell clickable" onclick="filterCritical()">
+      <div class="stat-label">🚨 Critical</div>
+      <div class="stat-num c-crit mono" id="s-crit">0</div>
+    </div>
+  </div>
+
+  <!-- Sentiment pulse bar under stats -->
+  <div class="pulse-bar">
+    <div class="pb-pos" id="pb-pos" style="width:0%"></div>
+    <div class="pb-neu" id="pb-neu" style="width:0%"></div>
+    <div class="pb-neg" id="pb-neg" style="width:0%"></div>
+  </div>
+
+  <!-- ── Word Cloud ────────────────────────────────────────────────────────── -->
+  <div id="wc-section">
+    <div class="section-title">☁ Top Keywords — click any to search</div>
+    <div class="cloud-words" id="cloud-words"></div>
+  </div>
+
+  <!-- ── Charts ────────────────────────────────────────────────────────────── -->
+  <div class="charts-section">
+    <div class="section-title" style="margin-bottom:14px">📊 Analytics — All-Time</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Daily Mentions</h3>
+        <div class="chart-wrap"><canvas id="c-timeline"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Sentiment Trend (7-day rolling)</h3>
+        <div class="chart-wrap"><canvas id="c-sentiment"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Platform Breakdown</h3>
+        <div class="chart-wrap"><canvas id="c-platform"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Play Store Rating Trend</h3>
+        <div class="chart-wrap"><canvas id="c-ratings"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Reddit Engagement (Top 15)</h3>
+        <div class="chart-wrap"><canvas id="c-engagement"></canvas></div>
+      </div>
+      <div class="chart-card" id="c-topic-card" style="display:none">
+        <h3>Topic Breakdown (LLM)</h3>
+        <div class="chart-wrap"><canvas id="c-topics"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Filter Bar ─────────────────────────────────────────────────────────── -->
+  <div class="filters">
+
+    <!-- Platform -->
+    <div class="filter-group" id="pf">
+      <button class="btn active" id="pf-all" onclick="setFilter('platform','all',this)">All</button>
+      <button class="btn" id="pf-reddit" onclick="setFilter('platform','reddit',this)">Reddit</button>
+      <button class="btn" id="pf-play" onclick="setFilter('platform','playstore',this)">Play Store</button>
+      <button class="btn" id="pf-apple" onclick="setFilter('platform','appstore',this)">App Store</button>
+      <button class="btn" id="pf-twitter" onclick="setFilter('platform','twitter',this)">Twitter</button>
+    </div>
+
+    <div class="filter-sep"></div>
+
+    <!-- Keyword search -->
+    <div class="search-box">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+      </svg>
+      <input type="text" id="search-input" placeholder="Search mentions…" oninput="applyFilters()">
+    </div>
+
+    <div class="filter-sep"></div>
+
+    <!-- Sentiment -->
+    <div class="filter-group" id="sf">
+      <button class="btn active" id="sf-all" onclick="setFilter('sentiment','all',this)">All</button>
+      <button class="btn" id="sf-pos" onclick="setFilter('sentiment','positive',this)">✓ Positive</button>
+      <button class="btn" id="sf-neu" onclick="setFilter('sentiment','neutral',this)">~ Neutral</button>
+      <button class="btn" id="sf-neg" onclick="setFilter('sentiment','negative',this)">✗ Negative</button>
+      <button class="btn" id="btn-crit" onclick="filterCritical()">🚨</button>
+    </div>
+
+    <div class="filter-sep"></div>
+
+    <!-- Topic (LLM only) -->
+    <div class="filter-group" id="tf" style="display:none">
+      <button class="btn active" id="tf-all" onclick="setFilter('topic','all',this)">All Topics</button>
+      <button class="btn" id="tf-bug" onclick="setFilter('topic','bug_report',this)">🐛 Bugs</button>
+      <button class="btn" id="tf-feat" onclick="setFilter('topic','feature_request',this)">💡 Features</button>
+      <button class="btn" id="tf-prz" onclick="setFilter('topic','praise',this)">✦ Praise</button>
+      <button class="btn" id="tf-q" onclick="setFilter('topic','question',this)">? Questions</button>
+    </div>
+
+    <div class="filter-sep" id="tf-sep" style="display:none"></div>
+
+    <!-- Date range -->
+    <div class="date-range">
+      <label>From</label>
+      <input type="date" id="date-from" onchange="applyFilters()">
+      <label>To</label>
+      <input type="date" id="date-to" onchange="applyFilters()">
+    </div>
+
+    <div class="filter-sep"></div>
+
+    <!-- Sort -->
+    <div class="sort-select">
+      <select id="sort-sel" onchange="applyFilters()">
+        <option value="date">Newest first</option>
+        <option value="relevance">BM25 Relevance</option>
+        <option value="neg">Most Negative</option>
+        <option value="pos">Most Positive</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- ── Cards ──────────────────────────────────────────────────────────────── -->
+  <main class="main">
+    <div class="main-header">
+      <div class="main-title">
+        Recent Reviews &amp; Mentions
+        <span class="date-pill" id="date-pill">Last 7 days</span>
+      </div>
+      <div id="results-count"></div>
+    </div>
+    <div class="cards" id="cards-container">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading data…</span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Chart defaults
+    // ─────────────────────────────────────────────────────────────────────────────
+    Chart.defaults.color = '#545878';
+    Chart.defaults.borderColor = '#1f2340';
+    Chart.defaults.font.family = 'Syne';
+    Chart.defaults.font.size = 10;
+    const CA = id => document.getElementById(id).getContext('2d');
+    let charts = {};
+    function destroyChart(key) { if (charts[key]) { charts[key].destroy(); delete charts[key]; } }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // State
+    // ─────────────────────────────────────────────────────────────────────────────
+    let allRecords = [];
+    let wordCloudData = [];
+    let isLLM = false;
+    let filters = { platform: 'all', sentiment: 'all', topic: 'all', criticalOnly: false };
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Utilities
+    // ─────────────────────────────────────────────────────────────────────────────
+    function esc(s) {
+      return String(s ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function fmtDate(dt) {
+      if (!dt) return '';
+      try {
+        // Append Z only if no timezone info present
+        const iso = /Z|[+-]\d{2}:\d{2}$/.test(dt) ? dt : dt + 'Z';
+        return new Date(iso).toLocaleString('en-GB', {
+          day: '2-digit', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+      } catch { return String(dt).slice(0, 16).replace('T', ' '); }
+    }
+
+    function getDate(r) {
+      return r.created_utc || r.created_at || r.scraped_at || '';
+    }
+
+    // Levenshtein fuzzy search (client-side)
+    function lev(a, b) {
+      const m = a.length, n = b.length;
+      const dp = Array.from({ length: m + 1 }, (_, i) => Array.from({ length: n + 1 }, (_, j) => j === 0 ? i : 0));
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
+        dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      return dp[m][n];
+    }
+    function fuzzyMatch(hay, q) {
+      if (!q) return true;
+      const h = hay.toLowerCase(), ql = q.toLowerCase();
+      if (h.includes(ql)) return true;
+      const thr = Math.max(1, Math.floor(ql.length / 4));
+      return h.split(/\s+/).some(w => Math.abs(w.length - ql.length) <= thr && lev(w, ql) <= thr);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Data loading
+    // ─────────────────────────────────────────────────────────────────────────────
+    async function loadData() {
+      document.getElementById('cards-container').innerHTML =
+        '<div class="loading-state"><div class="spinner"></div><span>Loading data…</span></div>';
+
+      try {
+        let data = window.MATIKS_DATA || null;
+
+        if (!data) {
+          for (const path of ['../data/mentions_enriched.json', '../data/mentions.json']) {
+            try {
+              const res = await fetch(path);
+              if (res.ok) { data = await res.json(); break; }
+            } catch (_) { }
+          }
+        }
+
+        if (!data) throw new Error('No data found. Run aggregate.py then llm_analyzer.py and refresh.');
+
+        allRecords = data.records || [];
+        const meta = data.meta || {};
+        isLLM = !!meta.llm_enriched;
+
+        // Word cloud
+        try {
+          const wc = await fetch('../data/word_cloud.json');
+          if (wc.ok) wordCloudData = await wc.json();
+        } catch (_) { }
+
+        renderWordCloud();
+        updateStats(meta);
+        updateLastUpdated(meta);
+        buildAllCharts();
+        applyFilters();
+
+      } catch (e) {
+        document.getElementById('cards-container').innerHTML =
+          `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${esc(e.message)}</p></div>`;
+        document.getElementById('last-updated').textContent = 'No data loaded';
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stats panel
+    // ─────────────────────────────────────────────────────────────────────────────
+    function updateStats(meta) {
+      const bp = meta.by_platform || {};
+      const bs = meta.by_sentiment || {};
+
+      document.getElementById('s-total').textContent = meta.total || allRecords.length;
+      document.getElementById('s-reddit').textContent = bp.reddit || 0;
+      document.getElementById('s-playstore').textContent = bp.playstore || 0;
+      document.getElementById('s-appstore').textContent = bp.appstore || 0;
+      document.getElementById('s-twitter').textContent = bp.twitter || 0;
+      document.getElementById('s-pos').textContent = bs.positive || 0;
+      document.getElementById('s-neg').textContent = bs.negative || 0;
+
+      const critCount = meta.critical_count || allRecords.filter(r => r.is_critical).length;
+      document.getElementById('s-crit').textContent = critCount;
+
+      if (critCount > 0) {
+        const banner = document.getElementById('alert-banner');
+        banner.style.display = 'block';
+        document.getElementById('alert-text').textContent =
+          `⚠ ${critCount} Critical Bug Report${critCount > 1 ? 's' : ''} — very negative + bug label · click to filter`;
+      }
+
+      // Sentiment pulse bar
+      const total = (bs.positive || 0) + (bs.neutral || 0) + (bs.negative || 0) || 1;
+      document.getElementById('pb-pos').style.width = ((bs.positive || 0) / total * 100) + '%';
+      document.getElementById('pb-neu').style.width = ((bs.neutral || 0) / total * 100) + '%';
+      document.getElementById('pb-neg').style.width = ((bs.negative || 0) / total * 100) + '%';
+
+      // Show LLM-only controls
+      if (isLLM) {
+        document.getElementById('tf').style.display = 'flex';
+        document.getElementById('tf-sep').style.display = 'block';
+        document.getElementById('c-topic-card').style.display = 'block';
+      }
+    }
+
+    function updateLastUpdated(meta) {
+      const ts = meta.last_analyzed || meta.last_updated || '';
+      const label = ts ? ts.replace('T', ' ').slice(0, 16) + ' UTC' : 'unknown';
+      const mode = isLLM ? '· LLM ✓' : '· VADER only';
+      document.getElementById('last-updated').textContent = `Updated: ${label} ${mode}`;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Word cloud
+    // ─────────────────────────────────────────────────────────────────────────────
+    function renderWordCloud() {
+      if (!wordCloudData.length) return;
+      document.getElementById('wc-section').style.display = 'block';
+      const max = wordCloudData[0]?.count || 1;
+      document.getElementById('cloud-words').innerHTML = wordCloudData.slice(0, 40).map(w => {
+        const weight = Math.round((w.count / max) * 100);
+        return `<span class="cloud-word" style="opacity:${0.5 + weight / 200}" onclick="searchWord('${esc(w.word)}')">${esc(w.word)}<small>${w.count}</small></span>`;
+      }).join('');
+    }
+    function searchWord(w) { document.getElementById('search-input').value = w; applyFilters(); }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Filters
+    // ─────────────────────────────────────────────────────────────────────────────
+    function setFilter(type, value, btn) {
+      // Update state
+      filters[type] = value;
+      if (type !== 'topic') filters.criticalOnly = false;
+
+      // Update button active states in the right group
+      const groupMap = { platform: 'pf', sentiment: 'sf', topic: 'tf' };
+      const groupId = groupMap[type];
+      if (groupId) {
+        document.getElementById(groupId).querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+      }
+      if (btn) btn.classList.add('active');
+
+      // Deactivate critical if not filtering by it
+      if (type !== 'criticalOnly') {
+        document.getElementById('btn-crit').classList.remove('active');
+      }
+
+      applyFilters();
+    }
+
+    function filterCritical() {
+      filters.criticalOnly = !filters.criticalOnly;
+      document.getElementById('btn-crit').classList.toggle('active', filters.criticalOnly);
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const query = document.getElementById('search-input').value.trim();
+      const dateFrom = document.getElementById('date-from').value;
+      const dateTo = document.getElementById('date-to').value;
+      const sortBy = document.getElementById('sort-sel').value;
+      const hideDupes = document.getElementById('hide-dupes').checked;
+
+      // Default: last 7 days (override with manual date pickers)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const cutoff = sevenDaysAgo.toISOString().slice(0, 10);
+
+      // Update date pill
+      const pill = document.getElementById('date-pill');
+      if (dateFrom || dateTo) {
+        pill.textContent = `${dateFrom || '…'} → ${dateTo || '…'}`;
+      } else {
+        pill.textContent = 'All time';
+      }
+
+      // Start with allRecords (enriched)
+      let filtered = allRecords;
+
+      // 1. Relevance gate: hide low-relevance or LLM-tagged irrelevant
+      filtered = filtered.filter(r => {
+        const rel = r.relevance !== undefined ? r.relevance : 10;
+        const topic = r.topic || 'general';
+        return rel >= 7 && topic !== 'irrelevant';
+      });
+
+      // 2. Platform
+      if (filters.platform !== 'all') {
+        filtered = filtered.filter(r => r.platform === filters.platform);
+      }
+
+      // 3. Sentiment
+      if (filters.sentiment !== 'all') {
+        filtered = filtered.filter(r => {
+          const s = r.llm_sentiment || r.sentiment?.label || 'neutral';
+          if (filters.sentiment === 'positive') return s === 'positive' || s === 'very_positive';
+          if (filters.sentiment === 'negative') return s === 'negative' || s === 'very_negative';
+          if (filters.sentiment === 'neutral') return s === 'neutral' || s === 'mixed';
+          return s === filters.sentiment;
+        });
+      }
+
+      // 4. Topic
+      if (filters.topic !== 'all') {
+        filtered = filtered.filter(r => r.topic === filters.topic);
+      }
+
+      // 5. Critical only
+      if (filters.criticalOnly) {
+        filtered = filtered.filter(r => r.is_critical);
+      }
+
+      // 6. Hide near-duplicates
+      if (hideDupes) {
+        filtered = filtered.filter(r => !r.is_near_duplicate);
+      }
+
+      // 7. Date filter
+      filtered = filtered.filter(r => {
+        const dt = getDate(r);
+        if (!dt) return true;
+        const day = dt.slice(0, 10);
+        if (dateFrom && day < dateFrom) return false;
+        if (dateTo && day > dateTo) return false;
+        return true;
+      });
+
+      // 8. Keyword search (fuzzy)
+      if (query) {
+        filtered = filtered.filter(r =>
+          fuzzyMatch((r.title || '') + ' ' + (r.text || ''), query)
+        );
+      }
+
+      // 9. Sort
+      filtered.sort((a, b) => {
+        if (sortBy === 'relevance') return (b.bm25_score || 0) - (a.bm25_score || 0);
+        if (sortBy === 'neg') return (a.sentiment?.compound || 0) - (b.sentiment?.compound || 0);
+        if (sortBy === 'pos') return (b.sentiment?.compound || 0) - (a.sentiment?.compound || 0);
+        return getDate(b).localeCompare(getDate(a));
+      });
+
+      renderCards(filtered);
+
+      const crit = filters.criticalOnly ? ' · <span style="color:var(--crit)">🚨 CRITICAL ONLY</span>' : '';
+      document.getElementById('results-count').innerHTML =
+        `<strong>${filtered.length}</strong> of <strong>${allRecords.filter(r => r.relevance >= 7 && r.topic !== 'irrelevant').length}</strong> mentions${crit}`;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Cards
+    // ─────────────────────────────────────────────────────────────────────────────
+    function renderCards(records) {
+      const c = document.getElementById('cards-container');
+      if (!records.length) {
+        c.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>No mentions in this date range matching your filters. Try clearing the date pickers or changing the platform filter.</p></div>`;
+        return;
+      }
+      c.innerHTML = records.map((r, i) => cardHTML(r, i)).join('');
+    }
+
+    function starsHTML(rating) {
+      const n = Math.round(rating || 0);
+      return '★'.repeat(n) + '<span class="empty">' + '★'.repeat(5 - n) + '</span>';
+    }
+
+    function cardHTML(r, idx) {
+      const plt = r.platform || 'unknown';
+      const vader = r.sentiment || {};
+      const posP = Math.round((vader.pos || 0) * 100);
+      const negP = Math.round((vader.neg || 0) * 100);
+      const neuP = Math.max(0, 100 - posP - negP);
+      const sentKey = r.llm_sentiment || vader.label || 'neutral';
+      const sentLabel = {
+        very_positive: 'Very Positive', positive: 'Positive', mixed: 'Mixed',
+        neutral: 'Neutral', negative: 'Negative', very_negative: 'Very Negative'
+      }[sentKey] || sentKey;
+      const bm25 = r.bm25_score || 0;
+      const bm25Pct = Math.min(100, Math.round((bm25 / 8) * 100));
+      const date = fmtDate(getDate(r));
+
+      const pLabel = { reddit: 'Reddit', playstore: 'Play Store', appstore: 'App Store', twitter: 'Twitter/X' }[plt] || plt;
+      const topicLabels = {
+        bug_report: '🐛 Bug', feature_request: '💡 Feature', praise: '✦ Praise',
+        question: '? Q', competitor_comparison: '⚔ Comp', general: 'General'
+      };
+
+      // Key phrases
+      const kpHtml = (r.key_phrases || []).length
+        ? `<div class="key-phrases">${r.key_phrases.slice(0, 3).map(k => `<span class="kp">${esc(k)}</span>`).join('')}</div>` : '';
+
+      // Platform-specific meta
+      let metaHtml = '';
+      if (plt === 'reddit') {
+        metaHtml = `<span><span class="ico">▲</span>${r.score || 0}</span><span><span class="ico">💬</span>${r.num_comments || 0}</span>`;
+      } else if (plt === 'playstore' || plt === 'appstore') {
+        const ratingField = r.rating || r.score || 0;
+        metaHtml = `<span class="stars">${starsHTML(ratingField)}</span>`;
+        if (plt === 'playstore' && r.thumbs_up) metaHtml += `<span><span class="ico">👍</span>${r.thumbs_up}</span>`;
+        if (r.app_version) metaHtml += `<span>v${esc(r.app_version)}</span>`;
+      } else if (plt === 'twitter') {
+        metaHtml = `<span><span class="ico">♥</span>${r.like_count || 0}</span><span><span class="ico">↩</span>${r.retweet_count || 0}</span>`;
+      }
+
+      // LLM relevance badge
+      const relBadge = r.relevance != null
+        ? `<span class="rel-label" style="margin-left:4px">LLM ${r.relevance}/10</span>` : '';
+
+      const topicBadge = r.topic && r.topic !== 'general'
+        ? `<span class="badge ${r.topic}">${topicLabels[r.topic] || r.topic}</span>` : '';
+
+      return `
+<div class="card${r.is_critical ? ' is-critical' : ''}" style="animation-delay:${Math.min(idx * .03, .35)}s">
+  ${r.is_critical ? '<div class="crit-ribbon">⚠ Critical</div>' : ''}
+  <div class="card-header">
+    <div class="card-badges">
+      <span class="badge ${plt}">${esc(pLabel)}</span>
+      <span class="badge ${sentKey}">${esc(sentLabel)}</span>
+      ${topicBadge}
+    </div>
+    <span class="card-date">${date}</span>
+  </div>
+  ${r.title ? `<div class="card-title">${esc(r.title)}</div>` : ''}
+  ${r.text ? `<div class="card-text">${esc(r.text)}</div>` : ''}
+  ${kpHtml}
+  <div class="metric-row">
+    <span class="rel-label">Relevance</span>
+    <div class="rel-track"><div class="rel-fill" style="width:${bm25Pct}%"></div></div>
+    <span class="rel-val">${bm25.toFixed(2)}</span>
+    ${relBadge}
+  </div>
+  <div class="sent-bar">
+    <div class="s-pos" style="width:${posP}%"></div>
+    <div class="s-neu" style="width:${neuP}%"></div>
+    <div class="s-neg" style="width:${negP}%"></div>
+  </div>
+  <div class="card-footer">
+    <div class="card-meta">${metaHtml}</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="card-author">by <strong>${esc(r.author || r.username || r.display_name || 'Anonymous')}</strong></span>
+      ${(r.url && r.url !== '#') ? `<a class="card-link" href="${esc(r.url)}" target="_blank" rel="noopener">View →</a>` : ''}
+    </div>
+  </div>
+</div>`;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Charts
+    // ─────────────────────────────────────────────────────────────────────────────
+    function buildAllCharts() {
+      buildTimeline();
+      buildSentimentTrend();
+      buildPlatformDonut();
+      buildRatingTrend();
+      buildEngagement();
+      if (isLLM) buildTopics();
+    }
+
+    const TEAL = '#00e5c4';
+
+    function buildTimeline() {
+      destroyChart('timeline');
+      const counts = {};
+      allRecords.forEach(r => {
+        const d = getDate(r).slice(0, 10);
+        if (d) counts[d] = (counts[d] || 0) + 1;
+      });
+      const labels = Object.keys(counts).sort();
+      const data = labels.map(l => counts[l]);
+      charts.timeline = new Chart(CA('c-timeline'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data, backgroundColor: 'rgba(0,229,196,.25)',
+            borderColor: TEAL, borderWidth: 1.5, borderRadius: 3,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { maxTicksLimit: 8, font: { size: 9 } }, grid: { display: false } },
+            y: { beginAtZero: true, grid: { color: 'rgba(31,35,64,.6)' } }
+          }
+        }
+      });
+    }
+
+    function buildSentimentTrend() {
+      destroyChart('sentiment');
+      const byDay = {};
+      allRecords.forEach(r => {
+        const d = getDate(r).slice(0, 10);
+        if (!d) return;
+        if (!byDay[d]) byDay[d] = { pos: 0, neg: 0, neu: 0 };
+        const s = r.sentiment?.label || 'neutral';
+        if (s === 'positive') byDay[d].pos++;
+        else if (s === 'negative') byDay[d].neg++;
+        else byDay[d].neu++;
+      });
+      const labels = Object.keys(byDay).sort().slice(-30);
+      // 7-day rolling average
+      const rolling = (arr, key) => arr.map((_, i, a) => {
+        const slice = a.slice(Math.max(0, i - 6), i + 1);
+        return Math.round(slice.reduce((s, d) => s + (byDay[d][key] || 0), 0) / slice.length);
+      });
+
+      charts.sentiment = new Chart(CA('c-sentiment'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Positive', data: rolling(labels, 'pos'), borderColor: '#3ddc84', backgroundColor: 'rgba(61,220,132,.1)', borderWidth: 1.5, tension: .3, pointRadius: 0, fill: true },
+            { label: 'Negative', data: rolling(labels, 'neg'), borderColor: '#ff5c5c', backgroundColor: 'rgba(255,92,92,.08)', borderWidth: 1.5, tension: .3, pointRadius: 0, fill: true },
+            { label: 'Neutral', data: rolling(labels, 'neu'), borderColor: '#545878', borderWidth: 1, tension: .3, pointRadius: 0 },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { labels: { boxWidth: 8, padding: 10 } } },
+          scales: {
+            x: { ticks: { maxTicksLimit: 6, font: { size: 9 } }, grid: { display: false } },
+            y: { beginAtZero: true, grid: { color: 'rgba(31,35,64,.6)' } }
+          }
+        }
+      });
+    }
+
+    function buildPlatformDonut() {
+      destroyChart('platform');
+      const counts = {};
+      allRecords.forEach(r => {
+        const p = r.platform || 'unknown';
+        counts[p] = (counts[p] || 0) + 1;
+      });
+      const colorMap = { reddit: '#ff5722', playstore: '#00c853', appstore: '#4da6ff', twitter: '#1d9bf0', unknown: '#545878' };
+      const labels = Object.keys(counts);
+
+      charts.platform = new Chart(CA('c-platform'), {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: labels.map(l => counts[l]),
+            backgroundColor: labels.map(l => colorMap[l] || '#545878'),
+            borderWidth: 0, hoverOffset: 6,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '62%',
+          plugins: { legend: { position: 'right', labels: { boxWidth: 10, padding: 12 } } }
+        }
+      });
+    }
+
+    function buildRatingTrend() {
+      destroyChart('ratings');
+      const byDay = {};
+      allRecords.filter(r => r.platform === 'playstore' || r.platform === 'appstore').forEach(r => {
+        const d = getDate(r).slice(0, 10);
+        const rt = r.rating || r.score || 0;
+        if (!d || !rt) return;
+        if (!byDay[d]) byDay[d] = { sum: 0, cnt: 0 };
+        byDay[d].sum += rt; byDay[d].cnt++;
+      });
+      const labels = Object.keys(byDay).sort();
+      const avgs = labels.map(l => +(byDay[l].sum / byDay[l].cnt).toFixed(2));
+
+      charts.ratings = new Chart(CA('c-ratings'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Avg Rating', data: avgs,
+            borderColor: '#f5b843', backgroundColor: 'rgba(245,184,67,.1)',
+            borderWidth: 2, tension: .35, pointRadius: 0, fill: true,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { maxTicksLimit: 8, font: { size: 9 } }, grid: { display: false } },
+            y: { min: 1, max: 5, grid: { color: 'rgba(31,35,64,.6)' } }
+          }
+        }
+      });
+    }
+
+    function buildEngagement() {
+      destroyChart('eng');
+      const posts = allRecords
+        .filter(r => r.platform === 'reddit')
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
+        .slice(0, 15);
+      if (!posts.length) return;
+
+      const labels = posts.map(r => (r.title || r.text || '').slice(0, 26) + '…');
+      charts.eng = new Chart(CA('c-engagement'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Score', data: posts.map(r => r.score || 0), backgroundColor: 'rgba(255,87,34,.6)', borderRadius: 3, borderSkipped: false },
+            { label: 'Comments', data: posts.map(r => r.num_comments || 0), backgroundColor: 'rgba(0,229,196,.4)', borderRadius: 3, borderSkipped: false },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+          plugins: { legend: { labels: { boxWidth: 8, padding: 10 } } },
+          scales: {
+            x: { beginAtZero: true, grid: { color: 'rgba(31,35,64,.6)' } },
+            y: { ticks: { font: { size: 8 } } }
+          }
+        }
+      });
+    }
+
+    function buildTopics() {
+      destroyChart('topics');
+      const counts = {};
+      allRecords.forEach(r => { if (r.topic && r.topic !== 'irrelevant') counts[r.topic] = (counts[r.topic] || 0) + 1; });
+      const colorMap = {
+        bug_report: '#ff5c5c', feature_request: '#4da6ff', praise: '#3ddc84',
+        question: '#f5b843', competitor_comparison: '#c490ff', general: '#545878',
+      };
+      const labels = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+      charts.topics = new Chart(CA('c-topics'), {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: labels.map(l => counts[l]),
+            backgroundColor: labels.map(l => colorMap[l] || '#545878'),
+            borderWidth: 0, hoverOffset: 6,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '60%',
+          plugins: { legend: { position: 'right', labels: { boxWidth: 10, padding: 12 } } }
+        }
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Boot
+    // ─────────────────────────────────────────────────────────────────────────────
+    loadData();
+  </script>
+</body>
+
+</html>

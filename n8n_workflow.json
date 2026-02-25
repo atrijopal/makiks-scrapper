@@ -1,0 +1,168 @@
+{
+    "name": "Matiks Social Monitor",
+    "nodes": [
+        {
+            "parameters": {"rule": {"interval": [{"field": "hours", "hoursInterval": 6}]}},
+            "id": "n1",
+            "name": "Every 6 Hours",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [100, 300]
+        },
+        {
+            "parameters": {"command": "cd /data && python3 reddit_scraper.py >> data/scraper.log 2>&1 && echo 'reddit:ok' || echo 'reddit:fail'"},
+            "id": "n2",
+            "name": "Reddit Scraper",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [320, 100],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 30000
+        },
+        {
+            "parameters": {"command": "cd /data && python3 playstore_scraper.py >> data/scraper.log 2>&1 && echo 'playstore:ok' || echo 'playstore:fail'"},
+            "id": "n3",
+            "name": "Play Store Reviews",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [320, 260],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 30000
+        },
+        {
+            "parameters": {"command": "cd /data && python3 appstore_scraper.py >> data/scraper.log 2>&1 && echo 'appstore:ok' || echo 'appstore:fail'"},
+            "id": "n_appstore",
+            "name": "App Store Reviews",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [320, 420],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 30000
+        },
+        {
+            "parameters": {"command": "cd /data && python3 twitter_scraper.py >> data/scraper.log 2>&1 && echo 'twitter:ok' || echo 'twitter:fail'"},
+            "id": "n4",
+            "name": "Twitter / X",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [320, 580],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 30000
+        },
+        {
+            "parameters": {"mode": "append", "options": {}},
+            "id": "n5",
+            "name": "Merge 1 (Reddit + Play)",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3,
+            "position": [580, 180]
+        },
+        {
+            "parameters": {"mode": "append", "options": {}},
+            "id": "n5b",
+            "name": "Merge 2 (+ AppStore)",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3,
+            "position": [780, 300]
+        },
+        {
+            "parameters": {"mode": "append", "options": {}},
+            "id": "n6",
+            "name": "Merge 3 (+ Twitter)",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3,
+            "position": [980, 420]
+        },
+        {
+            "parameters": {"command": "cd /data && python3 aggregate.py >> data/scraper.log 2>&1 && echo 'aggregate:ok' || echo 'aggregate:fail'"},
+            "id": "n7",
+            "name": "Aggregate + VADER",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [1180, 300],
+            "retryOnFail": true,
+            "maxTries": 2,
+            "waitBetweenTries": 15000
+        },
+        {
+            "parameters": {"command": "cd /data && python3 llm_analyzer.py >> data/scraper.log 2>&1 && echo 'llm:ok' || echo 'llm:fail'"},
+            "id": "n8",
+            "name": "BM25 + LLM Enrichment",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [1380, 300],
+            "retryOnFail": true,
+            "maxTries": 2,
+            "waitBetweenTries": 20000
+        },
+        {
+            "parameters": {"command": "python3 -c \"\nimport json, os\npath = '/data/data/critical_alerts.json'\nif os.path.exists(path):\n    d = json.load(open(path))\n    print(f'CRITICAL:{len(d)}' if d else 'OK')\nelse:\n    print('OK')\n\""},
+            "id": "n9",
+            "name": "Check Critical Alerts",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [1580, 300]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+                    "conditions": [{"id": "c1", "leftValue": "={{ $json.stdout.trim().startsWith('CRITICAL') }}", "rightValue": true, "operator": {"type": "boolean", "operation": "equals"}}],
+                    "combinator": "and"
+                }
+            },
+            "id": "n10",
+            "name": "Critical?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [1780, 300]
+        },
+        {
+            "parameters": {"command": "echo \"[$(date -u +%Y-%m-%dT%H:%M:%SZ)] *** CRITICAL ALERT *** check dashboard\" >> /data/data/scraper.log"},
+            "id": "n11",
+            "name": "Log Critical",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [2000, 180]
+        },
+        {
+            "parameters": {"command": "echo \"[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Run complete - OK\" >> /data/data/scraper.log"},
+            "id": "n12",
+            "name": "Log OK",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [2000, 420]
+        }
+    ],
+    "connections": {
+        "Every 6 Hours": {"main": [[
+            {"node": "Reddit Scraper",     "type": "main", "index": 0},
+            {"node": "Play Store Reviews", "type": "main", "index": 0},
+            {"node": "App Store Reviews",  "type": "main", "index": 0},
+            {"node": "Twitter / X",        "type": "main", "index": 0}
+        ]]},
+        "Reddit Scraper":           {"main": [[{"node": "Merge 1 (Reddit + Play)", "type": "main", "index": 0}]]},
+        "Play Store Reviews":       {"main": [[{"node": "Merge 1 (Reddit + Play)", "type": "main", "index": 1}]]},
+        "Merge 1 (Reddit + Play)":  {"main": [[{"node": "Merge 2 (+ AppStore)",    "type": "main", "index": 0}]]},
+        "App Store Reviews":        {"main": [[{"node": "Merge 2 (+ AppStore)",    "type": "main", "index": 1}]]},
+        "Merge 2 (+ AppStore)":     {"main": [[{"node": "Merge 3 (+ Twitter)",     "type": "main", "index": 0}]]},
+        "Twitter / X":              {"main": [[{"node": "Merge 3 (+ Twitter)",     "type": "main", "index": 1}]]},
+        "Merge 3 (+ Twitter)":      {"main": [[{"node": "Aggregate + VADER",       "type": "main", "index": 0}]]},
+        "Aggregate + VADER":        {"main": [[{"node": "BM25 + LLM Enrichment",   "type": "main", "index": 0}]]},
+        "BM25 + LLM Enrichment":    {"main": [[{"node": "Check Critical Alerts",   "type": "main", "index": 0}]]},
+        "Check Critical Alerts":    {"main": [[{"node": "Critical?",               "type": "main", "index": 0}]]},
+        "Critical?":                {"main": [
+            [{"node": "Log Critical", "type": "main", "index": 0}],
+            [{"node": "Log OK",       "type": "main", "index": 0}]
+        ]}
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true
+    }
+}

@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  n8n:
+    build:
+      context: .
+      dockerfile: DockerFile
+    image: custom-n8n-python
+    container_name: n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./:/data
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Asia/Kolkata
+      - NODES_EXCLUDE="[]"
+    networks:
+      - scraper-net
+
+  linkedin-scraper:
+    image: python:3.12-slim
+    container_name: linkedin-scraper
+    restart: "no" # only runs on-demand
+    volumes:
+      - ./:/data
+    working_dir: /data
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      bash -c "
+        pip install playwright vaderSentiment requests --quiet &&
+        playwright install chromium --with-deps --quiet &&
+        python3 /data/scripts/linkedin_scraper.py
+      "
+    networks:
+      - scraper-net
+    profiles:
+      - linkedin # only starts when explicitly requested
+
+networks:
+  scraper-net:
+    driver: bridge
+
+volumes:
+  n8n_data:

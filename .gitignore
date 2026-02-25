@@ -1,0 +1,22 @@
+# Credentials — NEVER commit
+config.env
+
+# Auto-generated data outputs
+data/
+
+# Video files
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
